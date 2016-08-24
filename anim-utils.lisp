@@ -70,20 +70,20 @@
     
     (let* ((samples-per-channel (/ (length samples) channels))
            (left-channel (make-array samples-per-channel
-                                     :element-type '(complex double-float)
-                                     :initial-element (coerce 0.0 '(complex double-float))))
+                                     :element-type 'bordeaux-fft:complex-sample
+                                     :initial-element (coerce 0.0 'bordeaux-fft:complex-sample)))
            (right-channel (make-array samples-per-channel
-                                      :element-type '(complex double-float)
-                                      :initial-element (coerce 0.0 '(complex double-float)))))
+                                      :element-type 'bordeaux-fft:complex-sample
+                                      :initial-element (coerce 0.0 'bordeaux-fft:complex-sample))))
       (loop for i below samples-per-channel
          do
            (let ((left-raw (/ (aref samples (* 2 i)) 32768.0))
                  (right-raw (/ (aref samples (+ 1 (* 2 i))) 32768.0)))
              
              (setf (aref left-channel i)
-                   (coerce left-raw '(complex double-float)))
+                   (coerce left-raw 'bordeaux-fft:complex-sample))
              (setf (aref right-channel i)
-                   (coerce right-raw '(complex double-float)))))
+                   (coerce right-raw 'bordeaux-fft:complex-sample))))
       (make-mp3-file :samples samples
                      :left-channel left-channel
                      :right-channel right-channel
