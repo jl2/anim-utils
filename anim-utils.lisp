@@ -24,7 +24,7 @@
                               bordeaux-fft:complex-sample-array) double-float) step-value)
          (inline step-var))
 
-(defun step-var (val left-fft-data right-fft-data)
+(defun step-var (val scale left-fft-data right-fft-data)
   (declare (type animated-var val)
            (type bordeaux-fft:complex-sample-array left-fft-data right-fft-data))
   (the double-float 
@@ -34,7 +34,7 @@
                             (aref left-fft-data (- idx))
                             (aref right-fft-data idx))
                 into total
-                finally (return (* 0.00001d0 (abs total)))))))
+                finally (return (* scale (abs total)))))))
 
 (defgeneric deep-copy (object))
 
