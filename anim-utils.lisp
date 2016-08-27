@@ -10,6 +10,32 @@
   (upper 2 :type (unsigned-byte 32))
   (scale 1.0d0 :type double-float))
 
+(defstruct animated-var
+  (val 0.0d0 :type double-float)
+  (buckets '() :type list)
+  (offset 0.0d0 :type double-float))
+
+(defun reset-var (var)
+  (with-slots (offset) var
+    (setf offset 0.0d0)))
+
+(declaim (ftype (cl:function (animated-var
+                              bordeaux-fft:complex-sample-array 
+                              bordeaux-fft:complex-sample-array) double-float) step-value)
+         (inline step-var))
+
+(defun step-var (val left-fft-data right-fft-data)
+  (declare (type animated-var val)
+           (type bordeaux-fft:complex-sample-array left-fft-data right-fft-data))
+  (the double-float 
+       (incf (animated-var-offset val)
+             (loop for idx in (animated-var-buckets val)
+                summing (if (< idx 0)
+                            (aref left-fft-data (- idx))
+                            (aref right-fft-data idx))
+                into total
+                finally (return (* 0.00001d0 (abs total)))))))
+
 (defgeneric deep-copy (object))
 
 (defmethod deep-copy ((object transition-value))

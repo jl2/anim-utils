@@ -29,5 +29,16 @@
    #:mp3-file-channels
    #:mp3-file-mpg123-type
    #:mp3-file-duration-in-seconds
+
+   #:animated-var
+   #:reset-var
+   #:step-var
+   #:make-animated-var
+   #:val
+   #:buckets
+   #:offset
+   #:animated-var-val
+   #:animated-var-buckets
+   #:animated-var-offset
    ))
 
