@@ -1,10 +1,9 @@
 ;;;; package.lisp
 
 (defpackage #:anim-utils
-  (:use #:cl)
+  (:use #:cl #:j-utils)
   (:export 
    #:interpolate
-   #:fix-directory
 
    #:make-transition-value
    #:transition-value-current
@@ -13,12 +12,9 @@
    #:transition-value-scale
    #:transition-value-advance-value
    #:gv
-   #:map-val
    #:deep-copy
 
    #:make-movie
-
-   #:random-between
 
    #:read-mp3-file
 
@@ -34,6 +30,8 @@
    #:reset-var
    #:step-var
    #:make-animated-var
+   #:var-val
+   #:vv
    #:val
    #:buckets
    #:offset

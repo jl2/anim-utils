@@ -4,7 +4,8 @@
   :description "Describe mp3-utils here"
   :author "Jeremiah LaRocco <jeremiah.larocco@gmail.com>"
   :license "ISC"
-  :depends-on (#:mpg123-ffi
+  :depends-on (#:j-utils
+               #:mpg123-ffi
                #:bordeaux-fft)
   :serial t
   :components ((:file "package")

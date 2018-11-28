@@ -28,13 +28,21 @@
   (declare (type animated-var val)
            (type bordeaux-fft:complex-sample-array left-fft-data right-fft-data))
   (the double-float 
-       (incf (animated-var-offset val)
-             (loop for idx in (animated-var-buckets val)
-                summing (if (< idx 0)
-                            (aref left-fft-data (- idx))
-                            (aref right-fft-data idx))
-                into total
-                finally (return (* scale (abs total)))))))
+       (with-slots (offset buckets) val
+         (incf offset
+               (loop for idx in buckets
+                  summing (if (< idx 0)
+                              (aref left-fft-data (- idx))
+                              (aref right-fft-data idx))
+                  into total
+                  finally (return (* scale (abs total))))))))
+
+(defun var-val (val)
+  (with-slots (offset val) val
+    (+ offset val)))
+
+(defun vv (val)
+  (+ (animated-var-offset val) (animated-var-val val)))
 
 (defgeneric deep-copy (object))
 
@@ -44,15 +52,20 @@
                          :upper (transition-value-upper object)
                          :scale (transition-value-scale object)))
 
+(defmethod deep-copy ((object animated-var))
+  (make-animated-var :val (animated-var-val object)
+                     :buckets (copy-list (animated-var-buckets object))
+                     :offset (animated-var-offset object)))
 
 (defun gv (tv)
   (transition-value-current tv))
 
 (defun transition-value-advance-value (trans fft-data)
-  (incf (transition-value-current trans)
-     (loop for idx from (transition-value-lower trans) below (transition-value-upper trans)
-        summing (aref fft-data idx) into total
-        finally (return (* (transition-value-scale trans) (/ (abs total) (- (transition-value-upper trans) (transition-value-lower trans))))))))
+  (with-slots (current lower upper scale) trans
+  (incf current
+        (loop for idx from lower below upper
+           summing (aref fft-data idx) into total
+           finally (return (* scale (/ (abs total) (- upper lower))))))))
 
 (defun interpolate (a b cur-step steps &optional (looping nil))
   "Linearly interpolate between a and b over a number of steps.
@@ -77,16 +90,9 @@
 
 (defun mp3-file-duration-in-seconds (mp3)
   "Compute the duration of an mp3-file in seconds."
-  (/ (length (mp3-file-samples mp3)) 
-     (* (mp3-file-channels mp3) (mp3-file-sample-rate mp3))))
-
-(defun next-power-of-2 (num)
-  (loop
-     for power from 0
-     for cn = num then (floor (/ cn 2))
-     until (< cn 2)
-     finally (return (ash 1 (+ 1 power)))))
-
+  (with-slots (samples channels sample-rate) mp3
+    (/ (length samples) 
+       (* channels sample-rate))))
 
 (defun read-mp3-file (fname)
   "Read the specified mp3 file into an mp3-file structure."
@@ -119,8 +125,9 @@
 
 (defun make-movie (&key directory file-name
                      (mp3-name nil)
-                     (bit-rate (* 4 2014))
+                     (bit-rate (* 24 1024 1024))
                      (temp-name "tmpmovie.mpg")
+                     (file-template "frame%08d")
                      (image-type "png")
                      (remove-temp t))
   "Run ffmpeg to create a movie with audio."
@@ -129,14 +136,14 @@
 
   (let ((movie-command
          (format nil 
-                 "ffmpeg -r 30 -i \"~aframe%05d.~a\" -b ~a -q 4 \"~a\""
-                 directory image-type bit-rate temp-name))
+                 "ffmpeg -r 30 -i \"~a~a.~a\" -b ~a -q 4 \"~a~a\""
+                 directory file-template image-type bit-rate directory temp-name))
         (audio-command
          (format nil
-                 "ffmpeg -i \"~a\" -i \"~a\" -codec copy -shortest \"~a\""
-                 temp-name mp3-name file-name))
+                 "ffmpeg -i \"~a~a\" -i \"~a~a\" -codec copy -shortest \"~a\""
+                 directory temp-name mp3-name directory file-name))
         (mv-command
-         (format nil "mv \"~a\" \"~a\"" temp-name file-name)))
+         (format nil "mv \"~a~a\" \"~a~a\"" directory temp-name directory file-name)))
     
     (format t "~a~%" movie-command)
     (uiop:run-program movie-command)
@@ -152,19 +159,5 @@
           (format t "~a~%" mv-command)
           (uiop:run-program mv-command)))
 
-    (if remove-temp
+    (if (and remove-temp (probe-file file-name))
         (delete-file temp-name))))
-
-(defun random-between (min-val max-val)
-  (+ min-val (random (- max-val min-val))))
-
-(defun map-val (x xmin xmax new-xmin new-xmax)
-  "map a value from the range xmin,xmax to the range new-xmin,new-xmax"
-  (+ (* (/ (- x xmin) (- xmax xmin)) (- new-xmax new-xmin)) new-xmin))
-
-(defun fix-directory (directory-name)
-  "Make sure directory exists and has a / at the end."
-  (ensure-directories-exist
-   (if (char=  #\/ (aref directory-name (- (length directory-name) 1)))
-       directory-name 
-       (concatenate 'string directory-name "/"))))
